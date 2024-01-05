@@ -8,6 +8,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import db.DB;
+import db.DbException;
 import db.DbIntegrityException;
 
 public class App {
@@ -111,29 +112,66 @@ public class App {
 		// }
 
         //deletar dados
-        Connection conn = null;
-		PreparedStatement st = null;
-		try {
-			conn = DB.getConnection();
+        // Connection conn = null;
+		// PreparedStatement st = null;
+		// try {
+		// 	conn = DB.getConnection();
 	
-			st = conn.prepareStatement(
-					"DELETE FROM department "
-					+ "WHERE "
-					+ "Id = ?");
+		// 	st = conn.prepareStatement(
+		// 			"DELETE FROM department "
+		// 			+ "WHERE "
+		// 			+ "Id = ?");
 
-			st.setInt(1, 4);
+		// 	st.setInt(1, 4);
 			
-			int rowsAffected = st.executeUpdate();
+		// 	int rowsAffected = st.executeUpdate();
 			
-			System.out.println("Done! Rows affected: " + rowsAffected);
+		// 	System.out.println("Done! Rows affected: " + rowsAffected);
+		// }
+		// catch (SQLException e) {
+		// 	throw new DbIntegrityException(e.getMessage());
+		// } 
+		// finally {
+		// 	DB.closeStatement(st);
+		// 	DB.closeConnection();
+		// }
+
+        //transações
+        Connection conn = null;
+		Statement st = null;     
+        try {
+			conn = DB.getConnection();
+
+            conn.setAutoCommit(false);//não confirmar as alterações automaticamentes, ficando pendentes de autorização explícita
+
+            st = conn.createStatement();
+			
+			int rows1 = st.executeUpdate("UPDATE seller SET BaseSalary = 2090 WHERE DepartmentId = 1");
+
+            // int x = 1;
+            // if (x < 2){
+            //     throw new SQLException("Fake error");
+            // }
+
+            int rows2 = st.executeUpdate("UPDATE seller SET BaseSalary = 3090 WHERE DepartmentId = 2");
+
+            conn.commit();//confirmar transação
+			
+			System.out.println("Rows 1:" + rows1 + "\n Rows 2:" + rows2 );
 		}
 		catch (SQLException e) {
-			throw new DbIntegrityException(e.getMessage());
+            try {
+                conn.rollback();//volta transação caso tenha ocorrido algum erro, deve tratar a exceção 
+                throw new DbException("Transaction rolled back! Caused by: " + e.getMessage());
+            } catch (SQLException e1) {//quando tenta voltar e acontece um erro
+                throw new DbException("Error trying to rollback! Caused by: " + e.getMessage());
+            }
 		} 
 		finally {
 			DB.closeStatement(st);
 			DB.closeConnection();
-		}
+		}   
+
 	}
 }
     
